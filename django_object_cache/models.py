@@ -3,9 +3,17 @@ from weakref import WeakValueDictionary
 from django.db import models
 from django.db.models.base import ModelBase
 
+from django_object_cache.manager import CacheManager
+
 class CachedModelBase(ModelBase):
     def __new__(cls, *args, **kwargs):
         cls = super(CachedModelBase, cls).__new__(*args, **kwargs)
+        if (type(cls._default_manger) is models.Manager and
+            type(cls.objects) is models.Manager and
+            type(cls._base_manager) is models.Manager):
+            cls.add_to_class('objects', CacheManager())
+            cls._default_mangaer = cls.objects
+            cls._base_manager = cls.objects
         if not hasattr(cls._meta, 'cache_fields'):
             cls._meta.cache_fields = set([cls._meta.pk.name, 'pk'])
         else:
