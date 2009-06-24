@@ -10,7 +10,9 @@ from django_object_cache.util import cache_key_for_obj
 
 class CachedModelBase(ModelBase):
     def __new__(cls, *args, **kwargs):
-        cls = super(CachedModelBase, cls).__new__(*args, **kwargs)
+        cls = super(CachedModelBase, cls).__new__(cls, *args, **kwargs)
+        if cls._meta.abstract:
+            return cls
         if (type(cls._default_manger) is models.Manager and
             type(cls.objects) is models.Manager and
             type(cls._base_manager) is models.Manager):
@@ -24,7 +26,7 @@ class CachedModelBase(ModelBase):
         if not hasattr(cls._meta, 'instances'):
             cls.instances = {}
             for f in (cls._meta.cache_fields - set(['pk'])):
-                cls.instances[f] = WeakValueDictionary
+                cls.instances[f] = WeakValueDictionary()
 
         post_save.connection(cls._post_save, sender=cls)
         post_delete.connection(cls._post_delete, sender=cls)
