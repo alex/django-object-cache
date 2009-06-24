@@ -1,9 +1,12 @@
 from weakref import WeakValueDictionary
 
+from django.core.cache import cache
 from django.db import models
 from django.db.models.base import ModelBase
+from django.db.models.signals import post_save, post_delete
 
 from django_object_cache.manager import CacheManager
+from django_object_cache.util import cache_key_for_obj
 
 class CachedModelBase(ModelBase):
     def __new__(cls, *args, **kwargs):
@@ -22,6 +25,10 @@ class CachedModelBase(ModelBase):
             cls.instances = {}
             for f in (cls._meta.cache_fields - set(['pk'])):
                 cls.instances[f] = WeakValueDictionary
+
+        post_save.connection(cls._post_save, sender=cls)
+        post_delete.connection(cls._post_delete, sender=cls)
+
         return cls
 
     def __call__(cls, *args, **kwargs):
@@ -60,3 +67,19 @@ class CachedModel(models.Model):
 
     class Meta:
         abstract = True
+
+    @classmethod
+    def _post_save(cls, instance, **kwargs):
+        for field in (cls._meta.cache_fields - set(['pk'])):
+            val = getattr(instance, field)
+            if val is not None:
+                cls._meta.instances[field][val] = instance
+                cache.set(cache_key_for_obj(cls, field, val), instance)
+
+    @classmethod
+    def _post_delete(cls, instance, **kwargs):
+        for field in (cls._meta.cache_fields - set(['pk'])):
+            val = getattr(instance, field)
+            if val is not None:
+                cls._meta.instances[field].pop(val)
+                cache.delete(cache_key_for_obj(cls, field, val))
