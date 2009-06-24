@@ -49,8 +49,10 @@ class CachedModelBase(ModelBase):
                 if val is not None:
                     return val
         obj = super(CachedModelBase, cls).__call__(*args, **kwargs)
-        for field in cachable:
-            cls._meta.instances[field][getattr(obj, field)] = obj
+        # only cache saved objects
+        if obj.pk is not None:
+            for field in cachable:
+                cls._meta.instances[field][getattr(obj, field)] = obj
         return obj
 
 class CachedModel(models.Model):
