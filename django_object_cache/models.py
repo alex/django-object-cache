@@ -85,3 +85,13 @@ class CachedModel(models.Model):
             if val is not None:
                 cls._meta.instances[field].pop(val)
                 cache.delete(cache_key_for_obj(cls, field, val))
+
+    @classmethod
+    def _cache_obj(cls, obj):
+        for field in (cls._meta.cache_fields - set(['pk'])):
+            val = getattr(instance, field)
+            if val is not None:
+                new_obj = cls._meta.instances[field].setdefault(val, obj)
+                new_obj.__dict__.update(obj.__dict__)
+                obj = new_obj
+        return obj
