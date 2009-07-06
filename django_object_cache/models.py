@@ -39,7 +39,7 @@ class CachedModelBase(ModelBase):
         if kwargs:
             for field in cache_fields:
                 if field == 'pk':
-                    field == cls._meta.pk.name
+                    field = cls._meta.pk.name
                 val = kwargs.get(field)
                 if val is not None:
                     # We have the fields value, therefore if it's not in the
